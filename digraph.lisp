@@ -1,4 +1,5 @@
 ;; NDFA simulation as described in: https://swtch.com/~rsc/regexp/regexp1.html
+;; Try matching number sequences: (matchp '(cat oddp (cat evenp evenp)) 3 2 2 1)
 
 (setf *print-circle* t)
 
@@ -73,10 +74,6 @@
                    (append (fragment-outs frag1)
                            (fragment-outs frag2)))))
 
-(defun compile-regexp (expr)
-  (let ((fragment (compile-expr expr)))
-    (patch fragment (make-state :label 'match))))
-
 (defun reachable-states (state list-id)
   (cond ((null state) ())
         ((= (car (state-list-id state)) list-id) ())
@@ -96,12 +93,12 @@
   (flatmap (lambda (from-state)
              (reachable-states (car (state-out1 from-state)) step-id))
            (remove-if-not (lambda (state)
-                            (eq (state-label state) input))
+                            (state-matches-input state input))
                           clist)))
 
 (defun matchp (expr &rest inputs)
   (let ((fragment (compile-expr expr))
-        (match-state (make-state :label 'match)))
+        (match-state (make-state :label (lambda (input) (declare (ignore input)) t))))
     (patch fragment match-state)
     (let ((start-state (fragment-state fragment)))
       (labels ((iter (inputs possible-next-states step-id)
